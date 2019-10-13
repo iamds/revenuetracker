@@ -3,128 +3,228 @@
 
 <head>
   <meta charset="UTF-8" />
+  <title>Hello World</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
-  <style>
-    @media print {
-      #form {
-        display: none;
-      }
-    }
-  </style>
+  <script src="https://unpkg.com/browse/moment@2.24.0/moment.js"></script>
 </head>
-
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    class Page extends React.Component {
-      constructor(props) {
-        super(props);
-        this.state = {paper: "A4p", width: 297, height: 210, rows: 10, columns: 10};
-        this.handleChange = this.handleChange.bind(this);
-        this.handlePaperChange = this.handlePaperChange.bind(this);
-      }
+    <div id="root">
+   </div>
+    <script type="text/babel">
 
-      handleChange(event) {
-        this.setState({
-          [event.target.name]: event.target.value,
-          paper: event.target.name == "width" || event.target.name == "height" ? "None" : this.state.paper
-        });
-      }
-
-      handlePaperChange(event) {
-        let paper = {
-          A4p: {paper: "A4p", width: 210, height: 297},
-          A4l: {paper: "A4l", width: 297, height: 210},
-          letterp: {paper: "letterp", width: 215.9, height: 279.4},
-          letterl: {paper: "letterl", width: 279.4, height: 215.9},
+    function initialState() {
+        if(window.location.hash.substring(0,1) === "#") {
+            return JSON.parse(decodeURIComponent(window.location.hash.substring(1)));
+        } else {
+            return {players: [], end: new Date().getTime(), freeTime: 10000}
         }
-        this.setState(paper[event.target.value]);
-      }
+    }
 
-      render() {
+    function Page() {
+        const [state, setState] = React.useState(initialState());
+        console.log(state);
+
+        if(state.started) {
+            return <Clock {...state}/>
+        } else {
+            return <Builder state={state} setState={setState}/>
+        }
+    }
+
+    function Builder(props) {
+        const[date, setDate] = React.useState(new Date(props.state.end).toISOString());
+        const[freeTimeS, setFreeTimeS] = React.useState(props.state.freeTime/1000);
+
         return <div>
-            <div id="form">
-              <p/>
-              <form onSubmit={this.handleSubmit}>
-                <label> Paper Size: 
-                  <select value={this.state.paper} onChange={this.handlePaperChange}>
-                    <option value="A4p">A4 portrait</option>
-                    <option value="A4l">A4 landscape</option>
-                    <option value="letterp">Letter portrait</option>
-                    <option value="letterl">Letter landscape</option>
-                    <option value="None"></option>
-                  </select>
-                </label>
-                
-                <label> Paper Width (mm): <input type="text" name="width" min="100" type="number" value={this.state.width} onChange={this.handleChange}/></label>
-                <label> Paper Height (mm): <input type="text" name="height" min="100" type="number" value={this.state.height} onChange={this.handleChange}/></label>
-                <label> Rows: <input type="text" name="rows" min="1" type="number" value={this.state.rows} onChange={this.handleChange}/></label>
-                <label> Columns: <input type="text" name="columns" min="1" type="number" value={this.state.columns} onChange={this.handleChange}/></label>
-              </form>
-              <p/>
+            {props.state.players.map(p=><NewPlayer {...p}/>)}
+            <form onSubmit={e=>{ 
+                let newState = Object.assign({}, props.state);
+                newState.end = new Date(date).getTime();
+                newState.freeTime = freeTimeS * 1000;
+                newState.started = true;
+                props.setState(newState);
+                e.preventDefault();
+                }}>
+                <div className="form-group row">
+                    <label className="col-sm-2 col-form-label">Freetime(s)</label>
+                    <div className="col-sm-4">
+                        <input className="form-control" value={freeTimeS} onChange={a=>setFreeTimeS(a.target.value)}/>
+                    </div>
+                </div>
+                <div className="form-group row">
+                    <label className="col-sm-2 col-form-label">End</label>
+                    <div className="col-sm-4">
+                        <input className="form-control" value={date} onChange={a=>setDate(a.target.value)}/>
+                    </div>
+                </div>
+                <button type="submit" className="btn btn-primary mb-2">Go</button>
+            </form>
+
+            <PlayerAdder onAdd={n=>{
+                let newState = Object.assign({}, props.state);
+                newState.players.push({name: n.name, time: 0, color: n.color, color2: n.color2})
+                props.setState(newState);
+            }}/>
+        </div>
+    }
+
+    function NewPlayer(props) {
+        console.log(props);
+        return <div><button type="button" className="btn btn-outline-primary" style={{
+            margin: "3px",
+            color: props.color2,
+            backgroundColor: props.color,
+            borderColor: props.color}}>{props.name}</button></div>;
+    }
+
+    function PlayerAdder(props) {
+
+        const [state, setState] = React.useState({name: "", color: 0});
+
+        let colors = [
+            { color: "Red", color2: "white"},
+            { color: "White", color2: "black"}, 
+            { color: "Cyan", color2: "black"},
+            { color: "Silver", color2: "black"},
+            { color: "Blue ", color2: "white"},
+            { color: "Gray", color2: "white"},
+            { color: "DarkBlue", color2: "white"},
+            { color: "Black", color2: "white"},
+            { color: "LightBlue", color2: "black"},
+            { color: "Orange", color2: "white"},
+            { color: "Purple", color2: "white"},
+            { color: "Brown", color2: "white"},
+            { color: "Yellow", color2: "black"},
+            { color: "Maroon", color2: "white"},
+            { color: "Lime", color2: "black"},
+            { color: "Green", color2: "white"},
+            { color: "Magenta", color2: "white"},
+            { color: "Olive", color2: "white"},
+        ]
+
+        return <form className="form-inline" onSubmit={e=>{
+            props.onAdd({name: state.name, color: colors[state.color].color, color2: colors[state.color].color2});
+            setState({name: "", color: 0});
+            e.preventDefault();
+            }}>
+            <div className="form-group mb-2">
+                <input className="form-control" id="name1" value={state.name} placeholder="Name" onChange={a=>setState(Object.assign({}, state, {name: a.target.value}))}/>
             </div>
-            {this.state.width > 0 && this.state.height > 0 && this.state.columns > 0 && this.state.rows > 0 &&
-              <RevenueTracker width={parseInt(this.state.width)} height={parseInt(this.state.height)} columns={parseInt(this.state.columns)} rows={parseInt(this.state.rows)}/>
-            }
-          </div>;
-      }
+            <div className="form-group mb-2">
+                <select className="form-control" id="color" value={state.color} style={{background: colors[state.color].color, color:colors[state.color].color2}} onChange={a=>setState(Object.assign({}, state, {color: a.target.value}))}>
+                    {colors.map((c, i)=><option value={i} style={{background: c.color, color:c.color2}}>{c.color}</option>)}
+                </select>
+           </div>
+            <button type="submit" className="btn btn-primary mb-2">Add</button>
+        </form>
+ 
     }
 
-    function RevenueTracker(props) {
-      const pageWidth = props.width;
-      const pageHeight = props.height;
-      const rows = props.rows;
-      const columns = props.columns;
+    function Clock(props) {
 
-      const cellSize = Math.min(pageWidth / columns, pageHeight / rows);
+        const [state, setStateInternal] = React.useState(props);
+        const [active, setActive] = React.useState(undefined);
+        const [now, setNow] = React.useState(new Date().getTime());
 
-      const xshift = (pageWidth - cellSize * columns) / 2;
-      const yshift = (pageHeight - cellSize * rows) / 2;
-
-      const cells = [];
-
-      for(var y = 0; y < rows; y++) {
-        for(var x = 0; x < columns; x++) {
-          cells.push(<Rect x={x} y={y} i={x+y*columns} width={cellSize} xshift={xshift} yshift={yshift}/>);
+        const setState = s=>{
+            window.location.hash = "#" + JSON.stringify(s);
+            setStateInternal(s);
         }
-      }
 
-      return (
-      <svg width={props.width + "mm"} height={props.height + "mm"} version="1.1" xmlns="http://www.w3.org/2000/svg">
-        {cells}
-      </svg>);
+        React.useEffect(()=>{
+            let interval = setInterval(()=>{
+                setNow(new Date().getTime());
+            }, 47);
+            return ()=>clearInterval(interval);
+        });
+
+        let numberOfPlayers = state.players.length;
+        let timeAllottedToPlayers = state.players.reduce((total, p)=>total+p.time, 0);
+
+        let additionalActivePlayerTime = 0;
+        if(active) {
+            let timeUsedThisTurn = now - active.time;
+            if(timeUsedThisTurn > state.freeTime) {
+                additionalActivePlayerTime = timeUsedThisTurn - state.freeTime;
+                timeAllottedToPlayers += additionalActivePlayerTime;
+            }
+        }
+
+        function playerTimeRemaining(p) {
+            let totalMsRemaining = state.end - now;
+            let playerTime = p.time;
+            if(active && p === active.player) {
+                playerTime += additionalActivePlayerTime;
+            }
+            return (totalMsRemaining + timeAllottedToPlayers) / numberOfPlayers - playerTime;
+        }
+
+        function makeActive(player) {
+            console.log("make active", player)
+            if(!active || player !== active.player) {
+
+                if(active) {
+                    //let newState = JSON.parse(JSON.stringify(state));
+                    state.players.filter(p=>p === active.player).forEach(p=>p.time += additionalActivePlayerTime);
+                    setState(state);
+                }
+
+                setActive(player ? {time: new Date().getTime(), player: player} : undefined);
+            }
+        }
+
+        state.players.filter(p=>active && p === active.player).forEach(p=>{if(playerTimeRemaining(p) < 0) {makeActive(undefined);}});
+
+        let buttonHeight = window.innerHeight / (numberOfPlayers + 1) - 10;
+        let buttonWidth = window.innerWidth - 10;
+
+        return <div> 
+            {state.players.map(p=><Player name={p.name} active={active && active.player == p} color={p.color} color2={p.color2} time={playerTimeRemaining(p)} height={buttonHeight} width={buttonWidth} onClick={()=>makeActive(p)}/>)} 
+                <Button text="none" active={false} color="gray" color2="white" time={0} height={buttonHeight} width={buttonWidth} onClick={()=>makeActive(undefined)}/>
+            </div>
     }
 
-    function Rect(props) {
-      const x = props.x * props.width + props.xshift;
-      const y = props.y * props.width + props.yshift;
-      return <g>
-          <rect x={x + "mm"} y={y + "mm"} width={props.width + "mm"} height={props.width + "mm"} style={{fill:"rgb(255,255,255)",strokeWidth:3,stroke:"rgb(0,0,0)"}}/>;
-          <line x1={(x + props.width * 3/4) + "mm"} y1={(y + props.width/2) + "mm"} x2={(x + props.width) + "mm"} y2={(y + props.width/2) + "mm"} width={props.width + "mm"} height={props.width + "mm"} style={{fill:"rgb(255,255,255)",strokeWidth:1,stroke:"rgb(0,0,0)"}}/>;
+    function Button(props) {
+        console.log(props);
+        return <div><button type="button" className="btn btn-outline-primary" disabled={props.disabled} style={{
+            margin: "3px",
+            width: props.width,
+            height: props.height,
+            fontSize: props.width/20,
+            color: props.active?props.color:props.color2,
+            backgroundColor: props.active?props.color2:props.color,
+            borderColor: props.color}} onClick={()=>props.onClick()}>{props.text}</button></div>;
+    }
 
-          <line x1={(x + props.width * 1/4) + "mm"} y1={(y + props.width * 4/5) + "mm"} x2={(x + props.width * 1/4) + "mm"} y2={(y + props.width) + "mm"} width={props.width + "mm"} height={props.width + "mm"} style={{fill:"rgb(255,255,255)",strokeWidth:1,stroke:"rgb(0,0,0)"}}/>;
-          <line x1={(x + props.width * 2/4) + "mm"} y1={(y + props.width * 4/5) + "mm"} x2={(x + props.width * 2/4) + "mm"} y2={(y + props.width) + "mm"} width={props.width + "mm"} height={props.width + "mm"} style={{fill:"rgb(255,255,255)",strokeWidth:1,stroke:"rgb(0,0,0)"}}/>;
-          <line x1={(x + props.width * 3/4) + "mm"} y1={(y + props.width * 4/5) + "mm"} x2={(x + props.width * 3/4) + "mm"} y2={(y + props.width) + "mm"} width={props.width + "mm"} height={props.width + "mm"} style={{fill:"rgb(255,255,255)",strokeWidth:1,stroke:"rgb(0,0,0)"}}/>;
+    function Player(props) {
+        return <Button name={props.name} active={props.active} color={props.color} color2={props.color2} disabled={props.time < 0} height={props.height} width={props.width} onClick={props.onClick} text={props.name + " - " + format(props.time)}></Button>
+    }
 
-          <text x={(x + props.width* 2/5) + "mm"} y={(y + props.width * 2/5) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 4) + "mm"} fontFamily="Verdana"> {props.i} </text>
+    function format(totalMs) {
+        if(totalMs < 0) {
+            return "00:00:00.000";
+        }
+        function pad(num) {
+            if(num < 10) {
+                return "0" + num;
+            }
 
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*2/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i} </text>
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*4/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*2} </text>
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*6/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*3} </text>
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*9/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*4} </text>
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*11/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana" style={{fill: "red"}}> {props.i*5} </text>
-          <text x={(props.width * 7 / 8 + x) + "mm"} y={(y + props.width*13/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*6} </text>
-          <text x={(props.width * 5 / 8 + x) + "mm"} y={(y + props.width*13/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*7} </text>
-          <text x={(props.width * 3 / 8 + x) + "mm"} y={(y + props.width*13/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*8} </text>
-          <text x={(props.width * 1 / 8 + x) + "mm"} y={(y + props.width*13/15) + "mm"} dominantBaseline="middle" textAnchor="middle" fontSize={(props.width / 10) + "mm"} fontFamily="Verdana"> {props.i*9} </text>
-        </g>
+            return num;
+        }
+        let totalS = totalMs / 1000;
+        let s = totalS % 60;
+        let totalM = (totalS - s) / 60;
+        let m = totalM % 60;
+        let h = (totalM - m) / 60;
+
+        return pad(h) + ":" + pad(m) + ":" + pad(s.toFixed(3));
     }
 
     ReactDOM.render( <Page/>, document.getElementById('root'));
 
-    </script>
+  </script>
 </body>
-
-</html>
+ 
